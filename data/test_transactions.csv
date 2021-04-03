@@ -1,0 +1,10 @@
+Date,Brokerage,Account,Category,Company,Ticker,Action,Cost Basis Method,Qty,Price per share,Total
+9/10/20,Robinhood,,EV,NIO,NIO,Buy,,1,17.50,17.5
+12/24/20,Robinhood,,Ecommerce,ContextLogic,WISH,Buy,,1,20.45,20.45
+3/11/20,Robinhood,,Ride Share,Uber,UBER,Buy,,1,27.50,27.5
+12/24/20,Merrill Edge,Joint,Data Analytics,Palantir Technoogies,PLTR,Buy,,1,27.75,27.75
+3/11/20,Robinhood,,Ride Share,Lyft,LYFT,Buy,,1,29.50,29.5
+12/18/19,Robinhood,,Ride Share,Uber,UBER,Buy,,1,29.91,29.91
+8/15/19,Robinhood,,Ride Share,Uber,UBER,Buy,,1,33.75,33.75
+8/14/19,Robinhood,,Ride Share,Uber,UBER,Buy,,1,34.09,34.09
+12/10/18,Robinhood,,Streaming,Roku,ROKU,Buy,,1,37.00,37

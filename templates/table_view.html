@@ -1,0 +1,40 @@
+{% block body %}
+
+   	<head>
+		<title>Smart Portfolio</title>
+		<link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+		<script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+		<script type=text/javascript>
+			$(document).ready( function () {
+    			$('#summary').DataTable({
+					"pageLength": 100,
+					"paging" : false,
+					"searching" : false,
+					"info" : false,
+					"order": [[ 5, "desc" ]],
+
+					"columnDefs": [
+                    	{
+							"targets": [2, 6, 7, 8],
+							"render" : $.fn.dataTable.render.number( ',', '.', 0, '$' )
+						},
+                    	{
+							"targets": [3, 4],
+							"render" : $.fn.dataTable.render.number( ',', '.', 2, '$' )
+						},
+						{
+							"targets" : [5],
+							render: $.fn.dataTable.render.number(',', '.', 2, '', '%')
+						}
+					]
+				});
+			});
+		</script>
+	</head>
+
+	<body>
+		{{data | safe}}
+	</body>
+
+{% endblock %}
