@@ -12,19 +12,19 @@
 					"paging" : false,
 					"searching" : false,
 					"info" : false,
-					"order": [[ 5, "desc" ]],
+					"order": [[2, "desc" ]],
 
 					"columnDefs": [
                     	{
-							"targets": [2, 6, 7, 8],
+							"targets": [4, 6, 7, 8],
 							"render" : $.fn.dataTable.render.number( ',', '.', 0, '$' )
 						},
                     	{
-							"targets": [3, 4],
+							"targets": [1, 5],
 							"render" : $.fn.dataTable.render.number( ',', '.', 2, '$' )
 						},
 						{
-							"targets" : [5],
+							"targets" : [2],
 							render: $.fn.dataTable.render.number(',', '.', 2, '', '%')
 						}
 					]

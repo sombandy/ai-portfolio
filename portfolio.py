@@ -2,9 +2,15 @@
 # author: somnath.banerjee
 #
 import getopt
-import pandas as pd
 import sys
+
+import pandas as pd
 import yfinance as yf
+
+from ColumnNameConsts import ColumnNames
+
+CN = ColumnNames
+
 
 def curr_price(tickers):
 	tickers_str = ' '.join(tickers)
@@ -12,18 +18,18 @@ def curr_price(tickers):
 	data = yf.download(tickers_str, period="2d", group_by='ticker')
 	
 	c_prices = data.iloc[-1].loc[(slice(None), 'Close')]
-	c_prices.name = "Curr Price"
+	c_prices.name = CN.PRICE
 
 	d1_ago_price = data.iloc[-2].loc[(slice(None), 'Close')]
 	day_change = (c_prices - d1_ago_price) / d1_ago_price
-	day_change.name = "Day Change"
+	day_change.name = CN.DAY_CHNG
 
 	return pd.concat([c_prices, day_change], axis=1)
 
 def holdings(inputfile):
 	t = pd.read_csv(inputfile)
-	h = t.groupby("Ticker")[["Qty", "Total"]].sum()
-	h["Cost Price"] = h["Total"] / h["Qty"]
+	h = t.groupby("Ticker")[[CN.QTY, "Total"]].sum()
+	h[CN.COST_PRICE] = h[CN.TOTAL] / h[CN.QTY]
 	return h
 
 def summary(inputfile):
@@ -32,22 +38,32 @@ def summary(inputfile):
 
 	c_prices = curr_price(h.index)
 	s = pd.concat([h, c_prices], axis=1)
-	s["Market Value"] = s["Qty"] * s["Curr Price"]
-	s["Day Change Value"] = s["Market Value"] * s["Day Change"] / (1 + s["Day Change"])
-	s["Day Change"] = 100 * s["Day Change"]
-	s["Gain"] = s["Market Value"] - s["Total"]
+	s[CN.MARKET_VALUE] = s[CN.QTY] * s[CN.PRICE]
+	s[CN.DAY_CHNG_VAL] = (s[CN.MARKET_VALUE] * s[CN.DAY_CHNG] / 
+								(1 + s[CN.DAY_CHNG]))
+
+	s[CN.DAY_CHNG] = 100 * s[CN.DAY_CHNG]
+	s[CN.GAIN] = s[CN.MARKET_VALUE] - s[CN.TOTAL]
 
 	s = s.round(2)
-	s = s.astype({"Total" : int, "Market Value" : int, "Gain" : int})
-	s = s.sort_values(by="Day Change", ascending=False)
+	s = s.astype({CN.TOTAL : int, CN.MARKET_VALUE : int, CN.GAIN : int})
+
 
 	t = s.sum()
-	t = t[["Total", "Market Value", "Day Change Value"]]
-	t["Day Change Pct"] = 100 * t["Day Change Value"] / (t["Market Value"] - t["Day Change Value"])
-	t["Gain"] = t["Market Value"] - t["Total"]
+	t = t[[CN.TOTAL, CN.MARKET_VALUE, CN.DAY_CHNG_VAL]]
+	t[CN.GAIN] = t[CN.MARKET_VALUE] - t[CN.TOTAL]
+	t[CN.DAY_CHNG] = 100 * t[CN.DAY_CHNG_VAL] / (t[CN.MARKET_VALUE] - t[CN.DAY_CHNG_VAL])
+	print(t[CN.DAY_CHNG_VAL], t[CN.MARKET_VALUE], t[CN.DAY_CHNG])
+
 	t = t.to_frame().T
-	t = t.astype({"Total" : int, "Market Value" : int, "Gain" : int})
+	t = t.astype({CN.TOTAL : int, CN.MARKET_VALUE : int, CN.GAIN : int,
+					CN.DAY_CHNG_VAL : int})
 	t = t.round(2)
+
+	s = s[[CN.PRICE, CN.DAY_CHNG, CN.QTY, CN.DAY_CHNG_VAL, CN.COST_PRICE,
+			CN.TOTAL, CN.MARKET_VALUE, CN.GAIN]]
+
+	t = t[[CN.TOTAL, CN.MARKET_VALUE, CN.GAIN, CN.DAY_CHNG, CN.DAY_CHNG_VAL]]
 
 	return s, t
 
