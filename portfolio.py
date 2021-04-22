@@ -110,12 +110,10 @@ def main(argv):
 		sys.exit()
 
 	print("Input file is " + inputfile)
-	h = load(inputfile)
-	print(h)
 
-	# s, t = summary(inputfile)
-	# print(s.to_json())
-	# print(t.to_json())
+	s, t = summary(inputfile)
+	print(s.to_json())
+	print(t.to_json())
 	
 if __name__ == "__main__":
 	main(sys.argv[1:])
