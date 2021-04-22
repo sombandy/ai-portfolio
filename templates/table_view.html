@@ -1,7 +1,7 @@
 {% block body %}
 
    	<head>
-		<title>Smart Portfolio</title>
+		<title>AI Portfolio</title>
 		<link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
 		<script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
@@ -12,19 +12,19 @@
 					"paging" : false,
 					"searching" : false,
 					"info" : false,
-					"order": [[2, "desc" ]],
+					"order": [[3, "desc" ]],
 
 					"columnDefs": [
                     	{
-							"targets": [4, 6, 7, 8],
+							"targets": [5, 7, 8, 9],
 							"render" : $.fn.dataTable.render.number( ',', '.', 0, '$' )
 						},
                     	{
-							"targets": [1, 5],
+							"targets": [2, 6],
 							"render" : $.fn.dataTable.render.number( ',', '.', 2, '$' )
 						},
 						{
-							"targets" : [2],
+							"targets" : [3],
 							render: $.fn.dataTable.render.number(',', '.', 2, '', '%')
 						}
 					]

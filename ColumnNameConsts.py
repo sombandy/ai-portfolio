@@ -2,6 +2,8 @@
 # author: somnath.banerjee
 #
 class ColumnNames(object):
+	NAME = "Company"
+	TICKER = "Ticker"
 	QTY = "Qty"
 	PRICE = "Curr Price"
 	COST_PRICE = "Cost Price"
