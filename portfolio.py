@@ -12,7 +12,7 @@ from ColumnNameConsts import ColumnNames
 CN = ColumnNames
 
 def curr_price(tickers, is_crypto=False):
-	if tickers is None:
+	if tickers is None or tickers.empty:
 		return None
 
 	tickers_str = ' '.join(tickers)
@@ -20,7 +20,7 @@ def curr_price(tickers, is_crypto=False):
 	period = "2d"
 	if is_crypto:
 		period = "3d"
-	
+
 	data = yf.download(tickers_str, period=period, group_by='ticker')
 
 	if len(tickers) > 1:  # mutiple tickers
@@ -47,7 +47,6 @@ def load(inputfile):
 
 	stocks = h.iloc[h.index.get_level_values("Category") != "Cryptocurrency"]
 	cryptos = h.iloc[h.index.get_level_values("Category") == "Cryptocurrency"]
-
 	# stocks = stocks[3:6] # only for debugging
 
 	stock_prices = curr_price(stocks.index.get_level_values("Ticker"))
@@ -64,20 +63,20 @@ def summary(inputfile):
 	s = load(inputfile)
 
 	s[CN.MARKET_VALUE] = s[CN.QTY] * s[CN.PRICE]
-	s[CN.DAY_CHNG_VAL] = (s[CN.MARKET_VALUE] * s[CN.DAY_CHNG] / 
+	s[CN.DAY_CHNG_VAL] = (s[CN.MARKET_VALUE] * s[CN.DAY_CHNG] /
 								(1 + s[CN.DAY_CHNG]))
 
 	s[CN.DAY_CHNG] = 100 * s[CN.DAY_CHNG]
 	s[CN.GAIN] = s[CN.MARKET_VALUE] - s[CN.TOTAL]
 
 	s = s.round(2)
-	s = s.astype({CN.TOTAL : int, CN.MARKET_VALUE : int, CN.GAIN : int})	
+	s = s.astype({CN.TOTAL : int, CN.MARKET_VALUE : int, CN.GAIN : int})
 
 	t = s.sum()
 	t = t[[CN.TOTAL, CN.MARKET_VALUE, CN.DAY_CHNG_VAL]]
 	t[CN.GAIN] = t[CN.MARKET_VALUE] - t[CN.TOTAL]
 	t[CN.DAY_CHNG] = 100 * t[CN.DAY_CHNG_VAL] / (t[CN.MARKET_VALUE] - t[CN.DAY_CHNG_VAL])
-	
+
 	t = t.to_frame().T
 	t = t.astype({CN.TOTAL : int, CN.MARKET_VALUE : int, CN.GAIN : int,
 					CN.DAY_CHNG_VAL : int})
@@ -114,6 +113,6 @@ def main(argv):
 	s, t = summary(inputfile)
 	print(s.to_json())
 	print(t.to_json())
-	
+
 if __name__ == "__main__":
 	main(sys.argv[1:])
