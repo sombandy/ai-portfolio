@@ -72,12 +72,14 @@ def summary(inputfile):
 	t = s.sum()
 	t = t[[CN.TOTAL, CN.MARKET_VALUE, CN.DAY_CHNG_VAL]]
 	t[CN.GAIN] = t[CN.MARKET_VALUE] - t[CN.TOTAL]
+	t[CN.GAIN_PCT] = 100 * t[CN.GAIN] / t[CN.TOTAL]
 	t[CN.DAY_CHNG] = 100 * t[CN.DAY_CHNG_VAL] / (t[CN.MARKET_VALUE] - t[CN.DAY_CHNG_VAL])
 
 	t = t.to_frame().T
-	t = t[[CN.TOTAL, CN.MARKET_VALUE, CN.GAIN, CN.DAY_CHNG, CN.DAY_CHNG_VAL]]
+	t = t[[CN.TOTAL, CN.MARKET_VALUE, CN.GAIN, CN.GAIN_PCT, CN.DAY_CHNG, CN.DAY_CHNG_VAL]]
 	t = t.astype({CN.TOTAL : int, CN.MARKET_VALUE : int, CN.GAIN : int,
 					CN.DAY_CHNG_VAL : int})
+	t = t.round(2)
 
 	s = s[[CN.NAME, CN.TICKER, CN.PRICE, CN.DAY_CHNG, CN.QTY, CN.DAY_CHNG_VAL,
 			CN.COST_PRICE, CN.TOTAL, CN.MARKET_VALUE, CN.GAIN]]

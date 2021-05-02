@@ -12,3 +12,4 @@ class ColumnNames(object):
 	DAY_CHNG = "Day Change"
 	DAY_CHNG_VAL = "Day Change Vaue"
 	GAIN = "Gain"
+	GAIN_PCT = "Percentage Gain"
