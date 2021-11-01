@@ -57,6 +57,11 @@ def load(inputfile):
 	h = h.set_index(h.index.droplevel(["Category"]))
 	h.reset_index(inplace=True)
 
+	if not h[h[CN.PRICE].isnull()].empty:
+		null_tickers = h[h[CN.PRICE].isnull()][CN.TICKER].values
+		print("Discarding null prices: " + ", ".join(null_tickers))
+		h = h.dropna(axis = 0)
+
 	return h
 
 def summary(inputfile):
