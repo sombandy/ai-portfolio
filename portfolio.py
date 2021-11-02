@@ -13,32 +13,32 @@ CN = ColumnNames
 
 def curr_price(tickers, is_crypto=False):
 	if tickers is None or tickers.empty:
-		return None
+	    return None
 
 	tickers_str = ' '.join(tickers)
 
 	period = "2d"
 	if is_crypto:
-		period = "3d"
+	    period = "3d"
 
 	data = yf.download(tickers_str, period=period, group_by='ticker')
 
 	if len(tickers) > 1:  # mutiple tickers
-		c_prices = data.iloc[-1].loc[(slice(None), 'Close')]
-		c_prices.name = CN.PRICE
+	    c_prices = data.iloc[-1].loc[(slice(None), 'Close')]
+	    c_prices.name = CN.PRICE
 
-		d1_ago_price = data.iloc[-2].loc[(slice(None), 'Close')]
-		day_change = (c_prices - d1_ago_price) / d1_ago_price
-		day_change.name = CN.DAY_CHNG
-		return pd.concat([c_prices, day_change], axis=1)
+	    d1_ago_price = data.iloc[-2].loc[(slice(None), 'Close')]
+	    day_change = (c_prices - d1_ago_price) / d1_ago_price
+	    day_change.name = CN.DAY_CHNG
+	    return pd.concat([c_prices, day_change], axis=1)
 
 	else: # single ticker
-		c_price = data.iloc[-1]["Close"]
-		d1_ago_price = data.iloc[-2]["Close"]
-		day_change = (c_price - d1_ago_price) / d1_ago_price
-		df = pd.DataFrame({CN.PRICE : c_price, CN.DAY_CHNG : day_change},
-				index=[tickers[0]])
-		return df
+	    c_price = data.iloc[-1]["Close"]
+	    d1_ago_price = data.iloc[-2]["Close"]
+	    day_change = (c_price - d1_ago_price) / d1_ago_price
+	    df = pd.DataFrame({CN.PRICE : c_price, CN.DAY_CHNG : day_change},
+            index=[tickers[0]])
+	    return df
 
 def load(inputfile):
 	t = pd.read_csv(inputfile)
@@ -58,9 +58,9 @@ def load(inputfile):
 	h.reset_index(inplace=True)
 
 	if not h[h[CN.PRICE].isnull()].empty:
-		null_tickers = h[h[CN.PRICE].isnull()][CN.TICKER].values
-		print("Discarding null prices: " + ", ".join(null_tickers))
-		h = h.dropna(axis = 0)
+	    null_tickers = h[h[CN.PRICE].isnull()][CN.TICKER].values
+	    print("Discarding null prices: " + ", ".join(null_tickers))
+	    h = h.dropna(axis = 0)
 
 	return h
 
@@ -97,20 +97,20 @@ def main(argv):
 	inputfile = ""
 
 	try:
-		opts, _ = getopt.getopt(argv, "hi:", ["ifile="])
+	    opts, _ = getopt.getopt(argv, "hi:", ["ifile="])
 	except getopt.GetoptError:
-		print("daily_view.py -i <inputfile>")
-		sys.exit(2)
+	    print("daily_view.py -i <inputfile>")
+	    sys.exit(2)
 
 	for opt, arg in opts:
-		if opt == '-h':
-			print("daily_view.py -i <inputfile> -o <outputfile>")
-		elif opt in ('-i', "--ifile"):
-			inputfile = arg
+	    if opt == '-h':
+		    print("daily_view.py -i <inputfile> -o <outputfile>")
+	    elif opt in ('-i', "--ifile"):
+		    inputfile = arg
 
 	if inputfile=="":
-		print("Input or output file is not provided")
-		sys.exit()
+	    print("Input or output file is not provided")
+	    sys.exit()
 
 	print("Input file is " + inputfile)
 
@@ -119,4 +119,4 @@ def main(argv):
 	print(t.to_json())
 
 if __name__ == "__main__":
-	main(sys.argv[1:])
+    main(sys.argv[1:])
