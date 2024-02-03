@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "ai-portfolio"
+version = "0.1.0"
+description = ""
+authors = ["Somnath Banerjee <somnath.banerjee@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+gspread = "^6.0.0"
+flask = "^3.0.1"
+pandas = "^2.2.0"
+yfinance = "^0.2.36"
+pyarrow = "^15.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
