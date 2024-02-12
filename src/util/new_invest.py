@@ -19,7 +19,7 @@ def new_investements(months=None):
     data = worksheet.get_all_values()
     df = pd.DataFrame(data[1:], columns=data[0])
     df["Date"] = pd.to_datetime(df["Date"])
-    df["Total"] = pd.to_numeric(df["Total"])
+    df[["Total", "Qty"]] = df[["Total", "Qty"]].apply(pd.to_numeric, errors="coerce")
 
     if not months:
         current_year = datetime.datetime.now().year
@@ -32,8 +32,9 @@ def new_investements(months=None):
         print("Looking investments from ", start_date, " to ", today)
         df = df[df["Date"] >= start_date]
 
-    df = df.groupby("Company")["Total"].sum().reset_index()
-    df = df.sort_values("Total", ascending=False)
+    grouped = df.groupby("Company").agg({"Total": "sum", "Qty": "sum"}).reset_index()
+    grouped["Avg Price"] = grouped["Total"] / grouped["Qty"]
+    df = grouped.sort_values("Total", ascending=False)
 
     total_invested = df["Total"].sum()
     all_row = pd.DataFrame([["Total", total_invested]], columns=["Company", "Total"])
@@ -41,6 +42,8 @@ def new_investements(months=None):
     df["Percentage"] = df["Total"].apply(lambda x: (x / total_invested) * 100)
 
     df["Total"] = df["Total"].map("${:,.0f}".format)
+    df["Qty"] = df["Qty"].map("{:,.0f}".format)
+    df["Avg Price"] = df["Avg Price"].map("${:,.2f}".format)
     df["Percentage"] = df["Percentage"].map("{:,.2f}%".format)
 
     print(df.to_string(index=False))
