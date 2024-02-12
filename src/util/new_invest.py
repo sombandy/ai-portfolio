@@ -10,8 +10,8 @@ from src.util.gspread import transactions
 from src.util.yfinance import curr_price
 
 # third-party
-# import streamlit as st
 import pandas as pd
+import streamlit as st
 
 
 def new_investements(months=None):
@@ -42,10 +42,11 @@ def new_investements(months=None):
     total_invested = df["Total"].sum()
     total_gains = df[CN.GAIN].sum()
     gain_pct = total_gains / total_invested
-    all_row = pd.DataFrame(
+    total_df = pd.DataFrame(
         [["Total", total_invested, total_gains, gain_pct]],
         columns=["Ticker", "Total", CN.GAIN, CN.GAIN_PCT],
     )
+
     df["Investment Pct"] = df["Total"].apply(lambda x: (x / total_invested))
 
     df[CN.QTY] = df[CN.QTY].map("{:,.0f}".format)
@@ -60,14 +61,16 @@ def new_investements(months=None):
     df[cols] = df[cols].map(lambda x: "{:,.2f}%".format(x * 100))
 
     cols = [CN.TOTAL, CN.GAIN]
-    all_row[cols] = all_row[cols].map(lambda x: "${:,.0f}".format(x))
+    total_df[cols] = total_df[cols].map(lambda x: "${:,.0f}".format(x))
 
     cols = CN.GAIN_PCT
-    all_row[cols] = all_row[cols].map(lambda x: "{:,.2f}%".format(x * 100))
-    df = pd.concat([df, all_row], ignore_index=True)
+    total_df[cols] = total_df[cols].map(lambda x: "{:,.2f}%".format(x * 100))
 
     print(df.to_string(index=False))
-    return df
+    print("\n\n")
+    print(total_df.to_string(index=False))
+    print("\n\n")
+    return df, total_df
 
 
 if __name__ == "__main__":
@@ -75,5 +78,6 @@ if __name__ == "__main__":
     argparser.add_argument("-m", "--months", type=int)
     args = argparser.parse_args()
 
-    df = new_investements(args.months)
-    # st.table(df).sortable(True)
+    df, total_df = new_investements(args.months)
+    st.dataframe(df)
+    st.dataframe(total_df)

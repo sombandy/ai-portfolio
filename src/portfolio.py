@@ -3,8 +3,6 @@
 #
 
 # system
-import getopt
-import sys
 
 # first-party
 from src.config.ColumnNameConsts import ColumnNames

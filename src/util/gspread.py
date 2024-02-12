@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 
 CONFIG_DIR = "../../config"
 
-# TR_FILE_KEY = "1KacMHxZpEOnud6F46m81AGC_lBpXpPvZJtCXwxHa1H0"
 
 def load_gspread():
     cur_dir = os.path.dirname(os.path.realpath(__file__))
@@ -30,16 +29,17 @@ def load_gspread():
         gc = gspread.oauth(
             credentials_filename=credentials_file,
             authorized_user_filename=authorized_user_file,
-            scopes=['https://www.googleapis.com/auth/spreadsheets']
+            scopes=["https://www.googleapis.com/auth/spreadsheets"],
         )
 
     return gc
+
 
 def transactions(sheet_id=None):
     if not sheet_id:
         load_dotenv()
         sheet_id = os.getenv("TRANSACTIONS_SHEET")
-    
+
     gc = load_gspread()
     sh = gc.open_by_key(sheet_id)
     worksheet = sh.get_worksheet(0)
@@ -51,4 +51,3 @@ def transactions(sheet_id=None):
     cols = ["Qty", "Price per share", "Total"]
     df[cols] = df[cols].apply(pd.to_numeric, errors="coerce")
     return df
-
