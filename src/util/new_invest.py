@@ -1,25 +1,21 @@
 #!/usr/bin/env python
 
-# first-party
+# system
 import argparse
 import datetime
-from src.util.gspread import load_gspread
+
+# first-party
+from src.config.ColumnNameConsts import ColumnNames as CN
+from src.util.gspread import transactions
+from src.util.yfinance import curr_price
 
 # third-party
+# import streamlit as st
 import pandas as pd
-
-TR_FILE_KEY = "1KacMHxZpEOnud6F46m81AGC_lBpXpPvZJtCXwxHa1H0"
 
 
 def new_investements(months=None):
-    gc = load_gspread()
-    sh = gc.open_by_key(TR_FILE_KEY)
-    worksheet = sh.get_worksheet(0)
-
-    data = worksheet.get_all_values()
-    df = pd.DataFrame(data[1:], columns=data[0])
-    df["Date"] = pd.to_datetime(df["Date"])
-    df[["Total", "Qty"]] = df[["Total", "Qty"]].apply(pd.to_numeric, errors="coerce")
+    df = transactions()
 
     if not months:
         current_year = datetime.datetime.now().year
@@ -32,19 +28,43 @@ def new_investements(months=None):
         print("Looking investments from ", start_date, " to ", today)
         df = df[df["Date"] >= start_date]
 
-    grouped = df.groupby("Company").agg({"Total": "sum", "Qty": "sum"}).reset_index()
-    grouped["Avg Price"] = grouped["Total"] / grouped["Qty"]
+    grouped = df.groupby("Ticker").agg({"Total": "sum", "Qty": "sum"}).reset_index()
+    grouped[CN.COST_PRICE] = grouped["Total"] / grouped["Qty"]
     df = grouped.sort_values("Total", ascending=False)
 
-    total_invested = df["Total"].sum()
-    all_row = pd.DataFrame([["Total", total_invested]], columns=["Company", "Total"])
-    df = pd.concat([df, all_row], ignore_index=True)
-    df["Percentage"] = df["Total"].apply(lambda x: (x / total_invested) * 100)
+    df_price = curr_price(df["Ticker"])
+    df = df.join(df_price, on="Ticker", how="inner")
+    df.drop(CN.DAY_CHNG, axis=1, inplace=True)
 
-    df["Total"] = df["Total"].map("${:,.0f}".format)
-    df["Qty"] = df["Qty"].map("{:,.0f}".format)
-    df["Avg Price"] = df["Avg Price"].map("${:,.2f}".format)
-    df["Percentage"] = df["Percentage"].map("{:,.2f}%".format)
+    df[CN.GAIN] = df[CN.QTY] * (df[CN.PRICE] - df[CN.COST_PRICE])
+    df[CN.GAIN_PCT] = df[CN.GAIN] / df[CN.TOTAL]
+
+    total_invested = df["Total"].sum()
+    total_gains = df[CN.GAIN].sum()
+    gain_pct = total_gains / total_invested
+    all_row = pd.DataFrame(
+        [["Total", total_invested, total_gains, gain_pct]],
+        columns=["Ticker", "Total", CN.GAIN, CN.GAIN_PCT],
+    )
+    df["Investment Pct"] = df["Total"].apply(lambda x: (x / total_invested))
+
+    df[CN.QTY] = df[CN.QTY].map("{:,.0f}".format)
+
+    cols = [CN.TOTAL, CN.GAIN]
+    df[cols] = df[cols].map(lambda x: "${:,.0f}".format(x))
+
+    cols = [CN.COST_PRICE, CN.PRICE]
+    df[cols] = df[cols].map(lambda x: "${:,.2f}".format(x))
+
+    cols = [CN.GAIN_PCT, "Investment Pct"]
+    df[cols] = df[cols].map(lambda x: "{:,.2f}%".format(x * 100))
+
+    cols = [CN.TOTAL, CN.GAIN]
+    all_row[cols] = all_row[cols].map(lambda x: "${:,.0f}".format(x))
+
+    cols = CN.GAIN_PCT
+    all_row[cols] = all_row[cols].map(lambda x: "{:,.2f}%".format(x * 100))
+    df = pd.concat([df, all_row], ignore_index=True)
 
     print(df.to_string(index=False))
     return df
@@ -55,4 +75,5 @@ if __name__ == "__main__":
     argparser.add_argument("-m", "--months", type=int)
     args = argparser.parse_args()
 
-    new_investements(args.months)
+    df = new_investements(args.months)
+    # st.table(df).sortable(True)

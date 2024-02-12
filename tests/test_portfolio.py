@@ -1,23 +1,24 @@
-import unittest
+#!/usr/bin/env python
 
-from portfolio import curr_price
-from ColumnNameConsts import ColumnNames
+# first-party
+from src.util.yfinance import curr_price
+from src.config.ColumnNameConsts import ColumnNames as CN
 
-CN = ColumnNames
+# third-party
+import pytest
 
-class TestCurrPrice(unittest.TestCase):
 
-    def test_single_price(self):
-        tickers = ["BTC-USD"]
-        data = curr_price(tickers, is_crypto=True)
-        
-        assert(data.index == tickers)
-        assert(data[CN.PRICE].values[0] > 1000)
+def test_single_price():
+    tickers = ["BTC-USD"]
+    data = curr_price(tickers, is_crypto=True)
+    print(data)
 
-    def test_multiple_prices(self):
-        tickers = ["AMZN", "AAPL"]
-        data = curr_price(tickers)
-        assert((data[CN.PRICE].values > 0 ).all())
+    assert data.index == tickers
+    assert data[CN.PRICE].values[0] > 1000
 
-if __name__ == '__main__':
-    unittest.main()
+
+def test_multiple_prices():
+    tickers = ["AMZN", "AAPL"]
+    data = curr_price(tickers)
+    print(data)
+    assert (data[CN.PRICE].values > 0).all()
