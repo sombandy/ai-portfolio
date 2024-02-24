@@ -84,5 +84,6 @@ def summary():
     ]
     s = s.astype({CN.TOTAL: int, CN.MARKET_VALUE: int, CN.GAIN: int})
     s = s.round(2)
+    s = s.sort_values(CN.DAY_CHNG, ascending=False)
 
     return s, t
