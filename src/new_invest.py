@@ -14,19 +14,20 @@ import pandas as pd
 import streamlit as st
 
 
-def new_investements(months=None):
+def new_investements(months=0, days=0):
     df = transactions()
 
-    if not months:
-        current_year = datetime.datetime.now().year
-        print("Looking for current year: ", current_year)
-        df = df[df["Date"].dt.year == current_year]
-    else:
-        today = datetime.date.today()
+    today = datetime.date.today()
+    if not months and not days:
+        start_date = datetime.date(today.year, 1, 1)
+    elif months > 0:
         start_date = today - pd.DateOffset(months=months)
-        start_date = start_date.strftime("%Y-%m-%d")
-        print("Looking investments from ", start_date, " to ", today)
-        df = df[df["Date"] >= start_date]
+    elif days > 0:
+        start_date = today - pd.DateOffset(days=days)
+
+    start_date = start_date.strftime("%Y-%m-%d")
+    print("Looking investments from ", start_date, " to ", today)
+    df = df[df["Date"] >= start_date]
 
     grouped = df.groupby("Ticker").agg({"Total": "sum", "Qty": "sum"}).reset_index()
     grouped[CN.COST_PRICE] = grouped["Total"] / grouped["Qty"]
@@ -75,9 +76,10 @@ def new_investements(months=None):
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("-m", "--months", type=int)
+    argparser.add_argument("-m", "--months", type=int, default=0)
+    argparser.add_argument("-d", "--days", type=int, default=0)
     args = argparser.parse_args()
 
-    df, total_df = new_investements(args.months)
+    df, total_df = new_investements(args.months, args.days)
     st.dataframe(df)
     st.dataframe(total_df)
