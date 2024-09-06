@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-# system
 import json
 import os
 
-# third-party
+from src.config.ColumnNameConsts import ColumnNames as CN
+
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
@@ -25,6 +25,10 @@ def load_gspread():
             authorized_user,
             scopes=["https://www.googleapis.com/auth/spreadsheets"],
         )
+
+        ret_au_json = json.loads(ret_au)
+        with open(authorized_user_file, "w") as f:
+            f.write(json.dumps(ret_au_json, indent=4))
     else:
         gc = gspread.oauth(
             credentials_filename=credentials_file,
@@ -48,6 +52,6 @@ def transactions(sheet_id=None):
     df = pd.DataFrame(data[1:], columns=data[0])
     df["Date"] = pd.to_datetime(df["Date"])
 
-    cols = ["Qty", "Price per share", "Total"]
+    cols = [CN.QTY, CN.COST_PRICE, CN.TOTAL]
     df[cols] = df[cols].apply(pd.to_numeric, errors="coerce")
     return df
