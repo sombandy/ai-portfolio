@@ -37,23 +37,26 @@ def new_investements(months=0, days=0):
     df = df.join(df_price, on="Ticker", how="inner")
     df.drop(CN.DAY_CHNG, axis=1, inplace=True)
 
+    df[CN.MARKET_VALUE] = df[CN.QTY] * df[CN.PRICE]
     df[CN.GAIN] = df[CN.QTY] * (df[CN.PRICE] - df[CN.COST_PRICE])
     df[CN.GAIN_PCT] = df[CN.GAIN] / df[CN.TOTAL]
 
     total_invested = df["Total"].sum()
     total_gains = df[CN.GAIN].sum()
-    gain_pct = total_gains / total_invested
+    total_market_value = df[CN.MARKET_VALUE].sum()
+    gain_pct = 100 * total_gains / total_invested
     total_df = pd.DataFrame(
-        [["Total", total_invested, total_gains, gain_pct]],
-        columns=["Ticker", "Total", CN.GAIN, CN.GAIN_PCT],
+        [["Total", total_invested, total_market_value, total_gains, gain_pct]],
+        columns=[CN.TICKER, CN.TOTAL, CN.MARKET_VALUE, CN.GAIN, CN.GAIN_PCT],
     )
 
     df["Investment Pct"] = df["Total"].apply(lambda x: (x / total_invested))
 
     df[CN.QTY] = df[CN.QTY].map("{:,.0f}".format)
 
-    cols = [CN.TOTAL, CN.GAIN]
-    df[cols] = df[cols].map(lambda x: "${:,.0f}".format(x))
+    cols = [CN.TOTAL, CN.MARKET_VALUE, CN.GAIN]
+    df[cols] = df[cols].map(lambda x: "{:,.0f}".format(x))
+    total_df[cols] = total_df[cols].map(lambda x: "{:,.0f}".format(x))
 
     cols = [CN.COST_PRICE, CN.PRICE]
     df[cols] = df[cols].map(lambda x: "${:,.2f}".format(x))
@@ -61,16 +64,13 @@ def new_investements(months=0, days=0):
     cols = [CN.GAIN_PCT, "Investment Pct"]
     df[cols] = df[cols].map(lambda x: "{:,.2f}%".format(x * 100))
 
-    cols = [CN.TOTAL, CN.GAIN]
-    total_df[cols] = total_df[cols].map(lambda x: "${:,.0f}".format(x))
-
     cols = CN.GAIN_PCT
     total_df[cols] = total_df[cols].map(lambda x: "{:,.2f}%".format(x * 100))
 
     print(df.to_string(index=False))
-    print("\n\n")
+    print("\n")
     print(total_df.to_string(index=False))
-    print("\n\n")
+    print("\n")
     return df, total_df
 
 
