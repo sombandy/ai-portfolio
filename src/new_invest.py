@@ -28,6 +28,9 @@ def new_investements(months=0, days=0):
     start_date = start_date.strftime("%Y-%m-%d")
     print("Looking investments from ", start_date, " to ", today)
     df = df[df["Date"] >= start_date]
+    if df.empty:
+        print("No investments within the date range")
+        return df, None
 
     grouped = df.groupby("Ticker").agg({"Total": "sum", "Qty": "sum"}).reset_index()
     grouped[CN.COST_PRICE] = grouped["Total"] / grouped["Qty"]
