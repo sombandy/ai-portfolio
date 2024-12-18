@@ -8,17 +8,17 @@ from src.config.ColumnNameConsts import ColumnNames as CN
 import pytest
 
 
-def test_single_price():
+def test_crypto():
     tickers = ["BTC-USD"]
-    data = curr_price(tickers, is_crypto=True)
+    data = curr_price(tickers)
     print(data)
 
     assert data.index == tickers
     assert data[CN.PRICE].values[0] > 1000
 
 
-def test_multiple_prices():
-    tickers = ["AMZN", "AAPL"]
+def test_stocks():
+    tickers = ["NVDA", "AAPL"]
     data = curr_price(tickers)
     print(data)
     assert (data[CN.PRICE].values > 0).all()

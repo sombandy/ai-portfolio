@@ -1,0 +1,1 @@
+streamlit run src/new_invest.py

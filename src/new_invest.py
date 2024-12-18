@@ -65,7 +65,7 @@ def new_investements(months=0, days=0):
     df[cols] = df[cols].map(lambda x: "{:,.2f}%".format(x * 100))
 
     cols = CN.GAIN_PCT
-    total_df[cols] = total_df[cols].map(lambda x: "{:,.2f}%".format(x * 100))
+    total_df[cols] = total_df[cols].map(lambda x: "{:,.2f}%".format(x))
 
     print(df.to_string(index=False))
     print("\n")
