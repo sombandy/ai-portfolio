@@ -25,7 +25,7 @@ def load():
     # stocks = stocks[3:6] # only for debugging
 
     stock_prices = curr_price(stocks.index.get_level_values("Ticker"))
-    crypto_prices = curr_price(cryptos.index.get_level_values("Ticker"))
+    crypto_prices = curr_price(cryptos.index.get_level_values("Ticker"), crypto=True)
 
     p = pd.concat([stock_prices, crypto_prices])
     h = h.join(p, on="Ticker", how="inner")

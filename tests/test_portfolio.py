@@ -10,7 +10,7 @@ import pytest
 
 def test_crypto():
     tickers = ["BTC-USD"]
-    data = curr_price(tickers)
+    data = curr_price(tickers, crypto=True)
     print(data)
 
     assert data.index == tickers
