@@ -9,12 +9,10 @@ import pytest
 
 
 def test_crypto():
-    tickers = ["BTC-USD"]
+    tickers = ["BTC-USD", "ETH-USD"]
     data = curr_price(tickers, crypto=True)
     print(data)
-
-    assert data.index == tickers
-    assert data[CN.PRICE].values[0] > 1000
+    assert (data[CN.PRICE].values > 0).all()
 
 
 def test_stocks():

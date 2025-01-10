@@ -11,7 +11,6 @@ from src.util.yfinance import curr_price
 
 # third-party
 import pandas as pd
-import streamlit as st
 
 
 def new_investements(months=0, days=0):
@@ -84,5 +83,5 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     df, total_df = new_investements(args.months, args.days)
-    st.dataframe(df)
-    st.dataframe(total_df)
+    print(df)
+    print(total_df)

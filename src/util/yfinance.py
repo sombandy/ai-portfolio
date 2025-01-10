@@ -13,13 +13,12 @@ def curr_price(tickers, crypto=False):
 
     tickers_str = ' '.join(tickers)
     
-    days = 1
     today = pd.Timestamp.today()
-    if not crypto and today.weekday() in [5, 6]:
-        days = 2 if today.weekday() == 5 else 3
-
-    start_date = (today - pd.DateOffset(days=days)).strftime("%Y-%m-%d")
-    data = yf.download(tickers_str, start=start_date, group_by='ticker')
+    if crypto:
+        start_date = (today - pd.DateOffset(days=1)).strftime("%Y-%m-%d")
+        data = yf.download(tickers_str, start=start_date, group_by='ticker')
+    else:
+        data = yf.download(tickers_str, period="5d", group_by='ticker')
 
     c_prices = data.iloc[-1].loc[(slice(None), 'Close')]
     c_prices.name = CN.PRICE
