@@ -83,5 +83,3 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     df, total_df = new_investements(args.months, args.days)
-    print(df)
-    print(total_df)

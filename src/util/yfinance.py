@@ -15,10 +15,11 @@ def curr_price(tickers, crypto=False):
     
     today = pd.Timestamp.today()
     if crypto:
-        start_date = (today - pd.DateOffset(days=1)).strftime("%Y-%m-%d")
+        start_date = (today - pd.DateOffset(days=2)).strftime("%Y-%m-%d")
         data = yf.download(tickers_str, start=start_date, group_by='ticker')
     else:
         data = yf.download(tickers_str, period="5d", group_by='ticker')
+
 
     c_prices = data.iloc[-1].loc[(slice(None), 'Close')]
     c_prices.name = CN.PRICE
