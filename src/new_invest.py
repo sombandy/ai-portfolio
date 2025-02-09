@@ -31,13 +31,26 @@ def new_investements(months=0, days=0):
         print("No investments within the date range")
         return df, None
 
-    grouped = df.groupby("Ticker").agg({"Total": "sum", "Qty": "sum"}).reset_index()
+    grouped = (
+        df.groupby(["Category", "Ticker"])
+        .agg({"Total": "sum", "Qty": "sum"})
+        .reset_index()
+    )
     grouped[CN.COST_PRICE] = grouped["Total"] / grouped["Qty"]
     df = grouped.sort_values("Total", ascending=False)
 
-    df_price = curr_price(df["Ticker"])
+    stocks = df[df["Category"] != "Cryptocurrency"]
+    cryptos = df[df["Category"] == "Cryptocurrency"]
+
+    stock_prices = curr_price(stocks["Ticker"])
+    if not cryptos.empty:
+        crypto_prices = curr_price(cryptos["Ticker"], crypto=True)
+        df_price = pd.concat([stock_prices, crypto_prices])
+    else:
+        df_price = stock_prices
+
     df = df.join(df_price, on="Ticker", how="inner")
-    df.drop(CN.DAY_CHNG, axis=1, inplace=True)
+    df.drop([CN.DAY_CHNG, "Category"], axis=1, inplace=True)
 
     df[CN.MARKET_VALUE] = df[CN.QTY] * df[CN.PRICE]
     df[CN.GAIN] = df[CN.QTY] * (df[CN.PRICE] - df[CN.COST_PRICE])
