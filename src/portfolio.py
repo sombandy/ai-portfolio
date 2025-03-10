@@ -62,10 +62,14 @@ def summary():
     t = t[
         [CN.TOTAL, CN.MARKET_VALUE, CN.GAIN, CN.GAIN_PCT, CN.DAY_CHNG, CN.DAY_CHNG_VAL]
     ]
-    t = t.astype(
-        {CN.TOTAL: int, CN.MARKET_VALUE: int, CN.GAIN: int, CN.DAY_CHNG_VAL: int}
-    )
-    t = t.round(2)
+
+    t[CN.TOTAL] = t[CN.TOTAL].apply(lambda x: f"${x:,.0f}")
+    t[CN.MARKET_VALUE] = t[CN.MARKET_VALUE].apply(lambda x: f"${x:,.0f}")
+    t[CN.GAIN] = t[CN.GAIN].apply(lambda x: f"${x:,.0f}")
+    t[CN.DAY_CHNG_VAL] = t[CN.DAY_CHNG_VAL].apply(lambda x: f"${x:,.0f}")
+
+    t[CN.GAIN_PCT] = t[CN.GAIN_PCT].apply(lambda x: f"{x:.2f}%")
+    t[CN.DAY_CHNG] = t[CN.DAY_CHNG].apply(lambda x: f"{x:.2f}%")
 
     s = s[
         [

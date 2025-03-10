@@ -10,6 +10,6 @@ class ColumnNames(object):
 	TOTAL = "Total"
 	MARKET_VALUE = "Market Value"
 	DAY_CHNG = "Day Change"
-	DAY_CHNG_VAL = "Day Change Vaue"
+	DAY_CHNG_VAL = "Day Change Value"
 	GAIN = "Gain"
 	GAIN_PCT = "Gain%"
