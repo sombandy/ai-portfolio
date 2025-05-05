@@ -4,8 +4,10 @@
 from src.config.ColumnNameConsts import ColumnNames as CN
 
 # third-party
+from curl_cffi import requests
 import pandas as pd
 import yfinance as yf
+
 
 def curr_price(tickers, crypto=False):
     if tickers is None or len(tickers) == 0:
@@ -14,11 +16,13 @@ def curr_price(tickers, crypto=False):
     tickers_str = ' '.join(tickers)
     
     today = pd.Timestamp.today()
+    session = requests.Session(impersonate="chrome")
+
     if crypto:
         start_date = (today - pd.DateOffset(days=2)).strftime("%Y-%m-%d")
-        data = yf.download(tickers_str, start=start_date, group_by='ticker')
+        data = yf.download(tickers_str, start=start_date, group_by='ticker', session=session)
     else:
-        data = yf.download(tickers_str, period="5d", group_by='ticker')
+        data = yf.download(tickers_str, period="5d", group_by='ticker', session=session)
 
 
     c_prices = data.iloc[-1].loc[(slice(None), 'Close')]

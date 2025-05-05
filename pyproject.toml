@@ -10,11 +10,12 @@ packages = [{ include = "src" },]
 python = "^3.13.1"
 pandas = "^2.2.3"
 python-dotenv = "^1.0.1"
-yfinance = "^0.2.54"
+yfinance = "^0.2.57"
 flask = "^3.1.0"
 gspread = "^6.1.4"
 streamlit = "^1.42.1"
 pytest = "^8.3.4"
+curl-cffi = "^0.10.0"
 
 
 [build-system]
