@@ -57,20 +57,6 @@ def drop_tables():
         return False
 
 
-def drop_specific_tables(table_names):
-    """Drop specific tables by name."""
-    try:
-        with engine.connect() as conn:
-            for table_name in table_names:
-                conn.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
-                conn.commit()
-                print(f"✓ Dropped table: {table_name}")
-        return True
-    except Exception as e:
-        print(f"✗ Error dropping specific tables: {e}")
-        return False
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--drop", action="store_true", help="Drop all existing tables")
