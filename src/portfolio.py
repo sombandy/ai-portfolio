@@ -12,6 +12,9 @@ from src.util.yfinance import curr_price
 # third-party
 import pandas as pd
 
+# database
+from src.database.models import update_total
+
 CN = ColumnNames
 
 
@@ -90,4 +93,9 @@ def summary():
     s = s.round(2)
     s = s.sort_values(CN.DAY_CHNG, ascending=False)
 
+    try:
+        update_total(t)
+    except Exception as e:
+        print(f"Warning: Failed to save data to database: {e}")
+    
     return s, t
