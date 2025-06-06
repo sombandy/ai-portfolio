@@ -12,11 +12,9 @@ pandas = "^2.2.3"
 python-dotenv = "^1.0.1"
 yfinance = "^0.2.58"
 flask = "^3.1.0"
-gspread = "^6.1.4"
+gspread = "^6.2.1"
 streamlit = "^1.42.1"
 pytest = "^8.3.4"
-sqlalchemy = "^2.0.0"
-psycopg2-binary = "^2.9.0"
 
 
 [build-system]
