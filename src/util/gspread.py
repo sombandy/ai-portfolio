@@ -75,9 +75,9 @@ def update_portfolio_summary(t, sheet_id=None, worksheet_id=None):
     sh = gc.open_by_key(sheet_id)
     
     try:
-        worksheet = sh.worksheet("Summary")
+        worksheet = sh.worksheet("Net Worth")
     except gspread.WorksheetNotFound:
-        worksheet = sh.add_worksheet(title="Summary", rows="1000", cols="8")
+        worksheet = sh.add_worksheet(title="Net Worth", rows="1000", cols="8")
     
     existing_data = worksheet.get_all_values()
     headers = ["Date", "Total", "Market Value", "Gain", "Gain%", "Day Change", "Day Change Value", "Updated At"]
