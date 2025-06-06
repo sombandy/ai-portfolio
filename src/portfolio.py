@@ -7,13 +7,12 @@
 # first-party
 from src.config.ColumnNameConsts import ColumnNames
 from src.util.gspread import transactions
+from src.util.gspread import update_portfolio_summary
 from src.util.yfinance import curr_price
 
 # third-party
 import pandas as pd
 
-# database
-from src.database.models import update_total
 
 CN = ColumnNames
 
@@ -94,8 +93,8 @@ def summary():
     s = s.sort_values(CN.DAY_CHNG, ascending=False)
 
     try:
-        update_total(t)
+        update_portfolio_summary(t)
     except Exception as e:
-        print(f"Warning: Failed to save data to database: {e}")
+        print(f"Warning: Failed to save data to Google Sheets: {e}")
     
     return s, formatted_t
