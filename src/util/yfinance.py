@@ -20,11 +20,16 @@ def curr_price(tickers, crypto=False):
     else:
         data = yf.download(tickers_str, period="5d", group_by='ticker')
 
-
     c_prices = data.iloc[-1].loc[(slice(None), 'Close')]
     c_prices.name = CN.PRICE
 
-    d1_ago_price = data.iloc[-2].loc[(slice(None), 'Close')]
-    day_change = (c_prices - d1_ago_price) / d1_ago_price
+    day_change = pd.Series(0.0, index=c_prices.index)
+    try:
+        d1_ago_price = data.iloc[-2].loc[(slice(None), 'Close')]
+        day_change = (c_prices - d1_ago_price) / d1_ago_price
+    except IndexError:
+        pass
+
+    day_change = day_change.fillna(0)
     day_change.name = CN.DAY_CHNG
     return pd.concat([c_prices, day_change], axis=1)
