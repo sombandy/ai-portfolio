@@ -14,8 +14,18 @@ import pandas as pd
 def loss_tracker():
     df = transactions()
 
-    unique_tickers = df["Ticker"].unique()
-    df_price = curr_price(unique_tickers)
+    # Separate stocks and crypto to use appropriate price fetching
+    stocks = df[df["Category"] != "Cryptocurrency"]
+    cryptos = df[df["Category"] == "Cryptocurrency"]
+
+    # Fetch prices separately for stocks and crypto
+    stock_prices = curr_price(stocks["Ticker"].unique())
+    if not cryptos.empty:
+        crypto_prices = curr_price(cryptos["Ticker"].unique(), crypto=True)
+        df_price = pd.concat([stock_prices, crypto_prices])
+    else:
+        df_price = stock_prices
+
     df_price.drop(CN.DAY_CHNG, axis=1, inplace=True)
 
     df = df.merge(df_price, on="Ticker", how="inner")
