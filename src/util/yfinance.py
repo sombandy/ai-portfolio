@@ -11,24 +11,34 @@ def curr_price(tickers, crypto=False):
     if tickers is None or len(tickers) == 0:
         return None
 
-    tickers_str = ' '.join(tickers)
-    
-    today = pd.Timestamp.today()
-    if crypto:
-        start_date = (today - pd.DateOffset(days=2)).strftime("%Y-%m-%d")
-        data = yf.download(tickers_str, start=start_date, group_by='ticker')
-    else:
-        data = yf.download(tickers_str, period="5d", group_by='ticker')
+    c_prices = pd.Series(dtype=float)
+    prev_close_prices = pd.Series(dtype=float)
 
-    c_prices = data.iloc[-1].loc[(slice(None), 'Close')]
+    for ticker in tickers:
+        tick = yf.Ticker(ticker)
+        info = tick.info
+
+        # Get previous close from ticker.info for accurate yesterday's price
+        prev_close_val = info.get('previousClose') or info.get('regularMarketPreviousClose', 0)
+        prev_close_prices[ticker] = prev_close_val
+
+        # Get current price from ticker info
+        curr_price_val = info.get('currentPrice') or info.get('regularMarketPrice', 0)
+        c_prices[ticker] = curr_price_val
+
+
     c_prices.name = CN.PRICE
 
+    print("Previous close prices")
+    print(prev_close_prices.to_string())
+    print("Current prices")
+    print(c_prices.to_string())
+
+    # Calculate day change using previousClose from ticker info
     day_change = pd.Series(0.0, index=c_prices.index)
-    try:
-        d1_ago_price = data.iloc[-2].loc[(slice(None), 'Close')]
-        day_change = (c_prices - d1_ago_price) / d1_ago_price
-    except IndexError:
-        pass
+    for ticker in tickers:
+        if prev_close_prices[ticker] > 0:
+            day_change[ticker] = (c_prices[ticker] - prev_close_prices[ticker]) / prev_close_prices[ticker]
 
     day_change = day_change.fillna(0)
     day_change.name = CN.DAY_CHNG
