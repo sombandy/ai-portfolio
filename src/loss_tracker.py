@@ -27,6 +27,7 @@ def loss_tracker():
         df_price = stock_prices
 
     df_price.drop(CN.DAY_CHNG, axis=1, inplace=True)
+    df_price = df_price.reset_index().rename(columns={"index": "Ticker"})
 
     df = df.merge(df_price, on="Ticker", how="inner")
     df = df[df[CN.PRICE] < df[CN.COST_PRICE]]

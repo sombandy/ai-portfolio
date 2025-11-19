@@ -29,10 +29,10 @@ def curr_price(tickers, crypto=False):
 
     c_prices.name = CN.PRICE
 
-    print("Previous close prices")
-    print(prev_close_prices.to_string())
-    print("Current prices")
-    print(c_prices.to_string())
+    # print("Previous close prices")
+    # print(prev_close_prices.to_string())
+    # print("Current prices")
+    # print(c_prices.to_string())
 
     # Calculate day change using previousClose from ticker info
     day_change = pd.Series(0.0, index=c_prices.index)
