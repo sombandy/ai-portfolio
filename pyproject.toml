@@ -12,7 +12,6 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "flask>=3.1.0",
     "gspread>=6.2.1",
-    "streamlit>=1.42.1",
     "pytest>=8.3.4",
     "yfinance>=0.2.66",
 ]
