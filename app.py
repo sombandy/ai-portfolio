@@ -10,7 +10,7 @@ app = Flask(__name__)
 @app.route('/')
 def home_page():
 	s, t = pf.summary()
-	s_table = s.to_html(table_id="summary", index=False)
+	s_table = s.to_html(table_id="summary", index=False, na_rep="N/A")
 	t_table = t.to_html(index=False)
 	return render_template("table_view.html", data=s_table + "\n<p>\n" + t_table)
 

@@ -1,23 +1,35 @@
-$(document).ready( function () {
-    $('#summary').DataTable({
+$(document).ready(function () {
+	$('#summary').DataTable({
 		"pageLength": 100,
-		"paging" : false,
-		"searching" : false,
-		"info" : false,
-		"order": [[3, "desc" ]],
+		"paging": false,
+		"searching": false,
+		"info": false,
+		"order": [[10, "desc"]],
 
 		"columnDefs": [
-            {
-				"targets": [5, 7, 8, 9],
-				"render" : $.fn.dataTable.render.number( ',', '.', 0, '$' )
-			},
-            {
-				"targets": [2, 6],
-				"render" : $.fn.dataTable.render.number( ',', '.', 2, '$' )
+			{
+				"targets": [4, 6, 7, 8],
+				"render": $.fn.dataTable.render.number(',', '.', 0, '$')
 			},
 			{
-				"targets" : [3],
-				render: $.fn.dataTable.render.number(',', '.', 2, '', '%')
+				"targets": [2, 5],
+				"render": $.fn.dataTable.render.number(',', '.', 2, '$')
+			},
+			{
+				"targets": [9, 10, 11, 12, 13, 14, 15],
+				"render": $.fn.dataTable.render.number(',', '.', 2, '', '%'),
+				"createdCell": function (td, cellData, rowData, row, col) {
+					var val = parseFloat(cellData);
+					if (val > 0) {
+						$(td).css('color', 'green');
+					} else if (val < 0) {
+						$(td).css('color', 'red');
+					}
+				}
+			},
+			{
+				"targets": [11, 12, 13, 14, 15],
+				"defaultContent": "N/A"
 			}
 		]
 	});

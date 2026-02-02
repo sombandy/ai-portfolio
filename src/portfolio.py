@@ -11,6 +11,7 @@ from src.util.gspread import update_portfolio_summary
 from src.util.yfinance import curr_price
 
 # third-party
+from src.util.historical_cache import get_historical_prices
 import pandas as pd
 
 
@@ -46,6 +47,26 @@ def summary():
     s = load()
 
     s[CN.MARKET_VALUE] = s[CN.QTY] * s[CN.PRICE]
+    
+    # Calculate historical changes
+    hist_prices = get_historical_prices(s[CN.TICKER].unique().tolist())
+    
+    # Add historical changes
+    for period, col_name in [
+        ("7D", CN.CHNG_7D), 
+        ("1M", CN.CHNG_1M), 
+        ("3M", CN.CHNG_3M), 
+        ("6M", CN.CHNG_6M), 
+        ("1Y", CN.CHNG_1Y)
+    ]:
+        s[col_name] = s.apply(
+            lambda row: (
+                (row[CN.PRICE] - hist_prices.get(row[CN.TICKER], {}).get(period)) 
+                / hist_prices.get(row[CN.TICKER], {}).get(period) * 100
+            ) if hist_prices.get(row[CN.TICKER], {}).get(period) else None, 
+            axis=1
+        )
+
     s[CN.DAY_CHNG_VAL] = s[CN.MARKET_VALUE] * s[CN.DAY_CHNG] / (1 + s[CN.DAY_CHNG])
 
     s[CN.DAY_CHNG] = 100 * s[CN.DAY_CHNG]
@@ -78,7 +99,6 @@ def summary():
             CN.NAME,
             CN.TICKER,
             CN.PRICE,
-            CN.DAY_CHNG,
             CN.QTY,
             CN.DAY_CHNG_VAL,
             CN.COST_PRICE,
@@ -86,6 +106,12 @@ def summary():
             CN.MARKET_VALUE,
             CN.GAIN,
             CN.GAIN_PCT,
+            CN.DAY_CHNG,
+            CN.CHNG_7D,
+            CN.CHNG_1M,
+            CN.CHNG_3M,
+            CN.CHNG_6M,
+            CN.CHNG_1Y,
         ]
     ]
     s = s.astype({CN.TOTAL: int, CN.MARKET_VALUE: int, CN.GAIN: int})
