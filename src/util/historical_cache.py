@@ -26,6 +26,7 @@ def get_historical_prices(tickers: List[str]) -> Dict[str, Dict[str, float]]:
     missing_tickers = [t for t in tickers if t not in _price_cache]
     
     if missing_tickers:
+        print(f"Fetching historical data for: {missing_tickers}")
         _fetch_and_cache_prices(missing_tickers)
         
     # Return requested tickers from cache
