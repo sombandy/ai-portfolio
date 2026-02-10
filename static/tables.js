@@ -4,19 +4,19 @@ $(document).ready(function () {
 		"paging": false,
 		"searching": false,
 		"info": false,
-		"order": [[10, "desc"]],
+		"order": [[4, "desc"]],
 
 		"columnDefs": [
 			{
-				"targets": [4, 6, 7, 8],
+				"targets": [5, 7, 8, 10],
 				"render": $.fn.dataTable.render.number(',', '.', 0, '$')
 			},
 			{
-				"targets": [2, 5],
+				"targets": [2, 6],
 				"render": $.fn.dataTable.render.number(',', '.', 2, '$')
 			},
 			{
-				"targets": [9, 10, 11, 12, 13, 14, 15],
+				"targets": [4, 9, 11, 12, 13, 14, 15],
 				"render": $.fn.dataTable.render.number(',', '.', 2, '', '%'),
 				"createdCell": function (td, cellData, rowData, row, col) {
 					var val = parseFloat(cellData);
