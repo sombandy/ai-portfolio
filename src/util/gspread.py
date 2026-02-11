@@ -91,12 +91,12 @@ def update_portfolio_summary(t, sheet_id=None, worksheet_id=None):
     
     today = date.today().strftime('%Y-%m-%d')
     
-    total_value = data.get('Total', '0')
-    market_value = data.get('Market Value', '0')
-    gain_value = data.get('Gain', '0')
-    gain_pct_value = round(float(data.get('Gain%', '0')), 2)
-    day_change_value = round(float(data.get('Day Change', '0')), 2)
-    day_change_val = data.get('Day Change Value', '0')
+    total_value = data.get(CN.TOTAL, '0')
+    market_value = data.get(CN.MARKET_VALUE, '0')
+    gain_value = data.get(CN.GAIN, '0')
+    gain_pct_value = round(float(data.get(CN.GAIN_PCT, '0').strip('%')), 2) if isinstance(data.get(CN.GAIN_PCT, '0'), str) else round(float(data.get(CN.GAIN_PCT, '0')), 2)
+    day_change_value = round(float(data.get(CN.DAY_CHNG, '0').strip('%')), 2) if isinstance(data.get(CN.DAY_CHNG, '0'), str) else round(float(data.get(CN.DAY_CHNG, '0')), 2)
+    day_change_val = data.get(CN.DAY_CHNG_VAL, '0')
     updated_at = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
     
     row_to_update = None
