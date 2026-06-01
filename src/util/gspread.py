@@ -9,12 +9,21 @@ from src.config.ColumnNameConsts import ColumnNames as CN
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
+from google.oauth2.service_account import Credentials
 
 CONFIG_DIR = "../../config"
 
 load_dotenv()
 
 def load_gspread():
+    service_account_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+    if service_account_file:
+        credentials = Credentials.from_service_account_file(
+            service_account_file,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"],
+        )
+        return gspread.authorize(credentials)
+
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     credentials_file = os.path.join(cur_dir, CONFIG_DIR, "credentials.json")
     authorized_user_file = os.path.join(cur_dir, CONFIG_DIR, "authorized_user.json")
@@ -41,15 +50,29 @@ def load_gspread():
     return gc
 
 
-def transactions(sheet_id=None):
+def worksheet_values(sheet_id=None, worksheet_name=None, worksheet_index=0):
     if not sheet_id:
         sheet_id = os.getenv("TRANSACTIONS_SHEET")
 
     gc = load_gspread()
     sh = gc.open_by_key(sheet_id)
-    worksheet = sh.get_worksheet(0)
+
+    if worksheet_name:
+        try:
+            worksheet = sh.worksheet(worksheet_name)
+        except gspread.WorksheetNotFound:
+            if worksheet_index is None:
+                raise
+            worksheet = sh.get_worksheet(worksheet_index)
+    else:
+        worksheet = sh.get_worksheet(worksheet_index)
 
     data = worksheet.get_all_values()
+    return data
+
+
+def transactions(sheet_id=None, worksheet_name=None, worksheet_index=0):
+    data = worksheet_values(sheet_id, worksheet_name, worksheet_index)
     df = pd.DataFrame(data[1:], columns=data[0])
     df["Date"] = pd.to_datetime(df["Date"])
 
