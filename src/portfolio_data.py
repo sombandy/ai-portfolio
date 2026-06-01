@@ -189,7 +189,12 @@ def get_positions(
     }
 
 
-def get_position_detail(ticker: str, include_closed_history: bool = True) -> dict[str, Any]:
+def get_position_detail(
+    ticker: str,
+    include_closed_positions: bool = True,
+    include_raw_transactions: bool = False,
+    include_aggregate: bool = True,
+) -> dict[str, Any]:
     normalized_ticker = _normalize_ticker(ticker)
     warnings: list[str] = []
     positions_result = get_positions(ticker=normalized_ticker)
@@ -199,24 +204,34 @@ def get_position_detail(ticker: str, include_closed_history: bool = True) -> dic
     open_transactions_result = get_transactions(source=SOURCE_OPEN, ticker=normalized_ticker)
     warnings.extend(open_transactions_result["warnings"])
 
+    closed_positions: list[dict[str, Any]] = []
     closed_transactions: list[dict[str, Any]] = []
-    realized_position = None
-    if include_closed_history:
+    aggregate_realized_position = None
+
+    if include_closed_positions or include_aggregate:
+        realized_result = get_realized_positions(
+            ticker=normalized_ticker,
+            include_aggregate=include_aggregate,
+        )
+        warnings.extend(realized_result["warnings"])
+        if include_closed_positions:
+            closed_positions = realized_result["closed_positions"]
+        aggregate_positions = realized_result.get("aggregate_realized_positions") or []
+        if aggregate_positions:
+            aggregate_realized_position = aggregate_positions[0]
+
+    if include_raw_transactions:
         closed_transactions_result = get_transactions(source=SOURCE_CLOSED, ticker=normalized_ticker)
         warnings.extend(closed_transactions_result["warnings"])
         closed_transactions = closed_transactions_result["transactions"]
-
-        realized_result = get_realized_positions(ticker=normalized_ticker)
-        warnings.extend(realized_result["warnings"])
-        if realized_result["realized_positions"]:
-            realized_position = realized_result["realized_positions"][0]
 
     return {
         "ticker": normalized_ticker,
         "open_position": open_position,
         "open_transactions": open_transactions_result["transactions"],
+        "closed_positions": closed_positions,
         "closed_transactions": closed_transactions,
-        "realized_position": realized_position,
+        "aggregate_realized_position": aggregate_realized_position,
         "warnings": _unique_warnings(warnings),
     }
 
@@ -292,61 +307,192 @@ def get_transactions(
     }
 
 
-def get_realized_positions(ticker: str | None = None) -> dict[str, Any]:
+def get_realized_positions(
+    ticker: str | None = None,
+    include_aggregate: bool = True,
+) -> dict[str, Any]:
     loaded = load_sell_transactions()
     warnings = list(loaded["warnings"])
     normalized_ticker = _normalize_ticker(ticker) if ticker else None
-    transactions = [
-        tx
-        for tx in loaded["transactions"]
-        if normalized_ticker is None or tx["ticker"] == normalized_ticker
-    ]
+    transactions = sorted(loaded["transactions"], key=lambda tx: tx["row_number"] or 0)
+    closed_positions, match_warnings = _closed_positions_from_sell_transactions(
+        transactions,
+        target_ticker=normalized_ticker,
+    )
+    warnings.extend(match_warnings)
 
-    by_ticker: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for tx in transactions:
-        by_ticker[tx["ticker"]].append(tx)
-
-    realized_positions = []
-    for tx_ticker in sorted(by_ticker):
-        rows = by_ticker[tx_ticker]
-        buy_rows = [tx for tx in rows if tx["action"] == "Buy"]
-        sell_rows = [tx for tx in rows if tx["action"] == "Sell"]
-
-        qty_bought = sum(tx["qty"] for tx in buy_rows)
-        qty_sold = sum(tx["qty"] for tx in sell_rows)
-        cost_basis = sum(tx["total"] for tx in buy_rows)
-        proceeds = sum(tx["total"] for tx in sell_rows)
-        realized_gain = proceeds - cost_basis
-        is_quantity_matched = abs(qty_bought - qty_sold) < 0.000001
-
-        if not is_quantity_matched:
-            warnings.append(
-                f"Sell tab quantity mismatch for {tx_ticker}: bought {qty_bought}, sold {qty_sold}."
-            )
-
-        realized_positions.append(
-            {
-                "ticker": tx_ticker,
-                "company": _representative_value(rows, "company"),
-                "category": _representative_value(rows, "category"),
-                "qty_bought": _json_number(qty_bought),
-                "qty_sold": _json_number(qty_sold),
-                "is_quantity_matched": is_quantity_matched,
-                "cost_basis": _json_number(cost_basis),
-                "proceeds": _json_number(proceeds),
-                "realized_gain": _json_number(realized_gain),
-                "realized_gain_pct": _json_number(_pct(realized_gain, cost_basis)),
-                "first_buy_date": _min_date(buy_rows),
-                "last_sell_date": _max_date(sell_rows),
-                "transaction_count": len(rows),
-            }
-        )
+    aggregate_realized_positions = (
+        _aggregate_realized_positions(closed_positions) if include_aggregate else None
+    )
 
     return {
         "source": "sell_tab",
-        "realized_positions": realized_positions,
+        "closed_positions": closed_positions,
+        "aggregate_realized_positions": aggregate_realized_positions,
         "warnings": _unique_warnings(warnings),
     }
+
+
+def _closed_positions_from_sell_transactions(
+    transactions: list[dict[str, Any]],
+    target_ticker: str | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    warnings: list[str] = []
+    closed_positions: list[dict[str, Any]] = []
+    sequence_by_ticker: dict[str, int] = defaultdict(int)
+
+    for index, tx in enumerate(transactions):
+        if tx["action"] != "Sell":
+            continue
+        if target_ticker and tx["ticker"] != target_ticker:
+            continue
+
+        ticker = tx["ticker"]
+        sequence_by_ticker[ticker] += 1
+        qty_remaining = tx["qty"]
+        qty_bought = 0.0
+        cost_basis = 0.0
+        consumed_lots: list[dict[str, Any]] = []
+        buy_row_numbers: list[int] = []
+
+        for candidate in transactions[index + 1 :]:
+            if qty_remaining <= 0.000001:
+                break
+            if candidate["action"] == "Sell":
+                break
+            if candidate["ticker"] != ticker:
+                continue
+
+            available_qty = candidate["qty"]
+            if available_qty <= 0:
+                continue
+
+            consumed_qty = min(available_qty, qty_remaining)
+            lot_cost = candidate["total"] * consumed_qty / available_qty
+
+            qty_remaining -= consumed_qty
+            qty_bought += consumed_qty
+            cost_basis += lot_cost
+            consumed_lots.append(candidate)
+
+            row_number = candidate.get("row_number")
+            if row_number is not None and row_number not in buy_row_numbers:
+                buy_row_numbers.append(row_number)
+
+        is_quantity_matched = abs(qty_bought - tx["qty"]) < 0.000001
+        if not is_quantity_matched:
+            warnings.append(
+                f"Sell tab row {tx.get('row_number')} for {ticker} sold {tx['qty']} shares "
+                f"but only {qty_bought} following Buy shares were available before the next Sell row."
+            )
+
+        proceeds = tx["total"]
+        realized_gain = proceeds - cost_basis
+        closed_positions.append(
+            {
+                "closed_position_id": f"{ticker}-{tx.get('row_number') or sequence_by_ticker[ticker]}",
+                "ticker": ticker,
+                "company": tx.get("company") or _representative_value(consumed_lots, "company"),
+                "category": tx.get("category") or _representative_value(consumed_lots, "category"),
+                "close_date": tx.get("date"),
+                "qty_bought": _json_number(qty_bought) or 0,
+                "qty_sold": _json_number(tx["qty"]) or 0,
+                "is_quantity_matched": is_quantity_matched,
+                "cost_basis": _json_number(cost_basis) or 0,
+                "proceeds": _json_number(proceeds) or 0,
+                "average_cost": _json_number(_divide(cost_basis, qty_bought)),
+                "sell_price": _json_number(tx["price_per_share"]),
+                "average_sell_price": _json_number(_divide(proceeds, tx["qty"])),
+                "realized_gain": _json_number(realized_gain) or 0,
+                "realized_gain_pct": _json_number(_pct(realized_gain, cost_basis)),
+                "first_buy_date": _min_date(consumed_lots),
+                "buy_transaction_count": len(buy_row_numbers),
+                "buy_row_numbers": buy_row_numbers,
+                "sell_row_number": tx.get("row_number"),
+            }
+        )
+
+    closed_positions.sort(
+        key=lambda position: (
+            position["close_date"] is None,
+            position["close_date"] or "",
+            position["sell_row_number"] or 0,
+        )
+    )
+    return closed_positions, warnings
+
+
+def _aggregate_realized_positions(
+    closed_positions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    row_sets: dict[str, set[int]] = defaultdict(set)
+
+    for position in closed_positions:
+        ticker = position["ticker"]
+        if ticker not in grouped:
+            grouped[ticker] = {
+                "ticker": ticker,
+                "company": position.get("company"),
+                "category": position.get("category"),
+                "qty_bought": 0.0,
+                "qty_sold": 0.0,
+                "is_quantity_matched": True,
+                "cost_basis": 0.0,
+                "proceeds": 0.0,
+                "realized_gain": 0.0,
+                "first_buy_date": None,
+                "last_sell_date": None,
+            }
+
+        aggregate = grouped[ticker]
+        aggregate["company"] = aggregate["company"] or position.get("company")
+        aggregate["category"] = aggregate["category"] or position.get("category")
+        aggregate["qty_bought"] += position["qty_bought"] or 0
+        aggregate["qty_sold"] += position["qty_sold"] or 0
+        aggregate["is_quantity_matched"] = (
+            aggregate["is_quantity_matched"] and position["is_quantity_matched"]
+        )
+        aggregate["cost_basis"] += position["cost_basis"] or 0
+        aggregate["proceeds"] += position["proceeds"] or 0
+        aggregate["realized_gain"] += position["realized_gain"] or 0
+        aggregate["first_buy_date"] = _earliest(
+            aggregate["first_buy_date"],
+            position.get("first_buy_date"),
+        )
+        aggregate["last_sell_date"] = _latest(
+            aggregate["last_sell_date"],
+            position.get("close_date"),
+        )
+
+        for row_number in position.get("buy_row_numbers", []):
+            row_sets[ticker].add(row_number)
+        if position.get("sell_row_number") is not None:
+            row_sets[ticker].add(position["sell_row_number"])
+
+    aggregates = []
+    for ticker in sorted(grouped):
+        aggregate = grouped[ticker]
+        cost_basis = aggregate["cost_basis"]
+        aggregates.append(
+            {
+                "ticker": aggregate["ticker"],
+                "company": aggregate["company"],
+                "category": aggregate["category"],
+                "qty_bought": _json_number(aggregate["qty_bought"]) or 0,
+                "qty_sold": _json_number(aggregate["qty_sold"]) or 0,
+                "is_quantity_matched": aggregate["is_quantity_matched"],
+                "cost_basis": _json_number(cost_basis) or 0,
+                "proceeds": _json_number(aggregate["proceeds"]) or 0,
+                "realized_gain": _json_number(aggregate["realized_gain"]) or 0,
+                "realized_gain_pct": _json_number(_pct(aggregate["realized_gain"], cost_basis)),
+                "first_buy_date": aggregate["first_buy_date"],
+                "last_sell_date": aggregate["last_sell_date"],
+                "transaction_count": len(row_sets[ticker]),
+            }
+        )
+
+    return aggregates
 
 
 def _load_tab(
@@ -599,6 +745,16 @@ def _max_date(rows: list[dict[str, Any]]) -> str | None:
 
 def _row_sort_key(row: dict[str, Any]) -> tuple[str, int]:
     return (row.get("date") or "", row.get("row_number") or 0)
+
+
+def _earliest(first: str | None, second: str | None) -> str | None:
+    dates = [value for value in [first, second] if value]
+    return min(dates) if dates else None
+
+
+def _latest(first: str | None, second: str | None) -> str | None:
+    dates = [value for value in [first, second] if value]
+    return max(dates) if dates else None
 
 
 def _matches(value: str | None, filter_value: str | None, ticker: bool = False) -> bool:
