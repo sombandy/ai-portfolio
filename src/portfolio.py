@@ -2,100 +2,62 @@
 # author: somnath.banerjee
 #
 
-# system
-
-# first-party
-from src.config.ColumnNameConsts import ColumnNames
-from src.util.gspread import transactions
-from src.util.gspread import update_portfolio_summary
-from src.util.yfinance import curr_price
-
-# third-party
-from src.util.historical_cache import get_historical_prices
 import pandas as pd
 
-
-CN = ColumnNames
+from src.config.ColumnNameConsts import ColumnNames as CN
+from src.portfolio_data import get_enriched_open_positions
+from src.util.gspread import update_portfolio_summary
 
 
 def load():
-    t = transactions()
-    h = t.groupby(["Category", "Company", "Ticker"])[["Qty", "Total"]].sum()
-    h[CN.COST_PRICE] = h[CN.TOTAL] / h[CN.QTY]
-
-    stocks = h.iloc[h.index.get_level_values("Category") != "Cryptocurrency"]
-    cryptos = h.iloc[h.index.get_level_values("Category") == "Cryptocurrency"]
-    # stocks = stocks[3:6] # only for debugging
-
-    stock_prices = curr_price(stocks.index.get_level_values("Ticker"))
-    crypto_prices = curr_price(cryptos.index.get_level_values("Ticker"), crypto=True)
-
-    p = pd.concat([stock_prices, crypto_prices])
-    h = h.join(p, on="Ticker", how="inner")
-    h = h.set_index(h.index.droplevel(["Category"]))
-    h.reset_index(inplace=True)
-
-    if not h[h[CN.PRICE].isnull()].empty:
-        null_tickers = h[h[CN.PRICE].isnull()][CN.TICKER].values
-        print("Discarding null prices: " + ", ".join(null_tickers))
-        h = h.dropna(axis=0)
-
-    return h
+    enriched = get_enriched_open_positions()
+    return _positions_to_dataframe(enriched["positions"])
 
 
 def summary():
-    s = load()
-
-    s[CN.MARKET_VALUE] = s[CN.QTY] * s[CN.PRICE]
-    
-    # Calculate historical changes
-    hist_prices = get_historical_prices(s[CN.TICKER].unique().tolist())
-    
-    # Add historical changes
-    for period, col_name in [
-        ("7D", CN.CHNG_7D), 
-        ("1M", CN.CHNG_1M), 
-        ("3M", CN.CHNG_3M), 
-        ("6M", CN.CHNG_6M), 
-        ("1Y", CN.CHNG_1Y)
-    ]:
-        s[col_name] = s.apply(
-            lambda row: (
-                (row[CN.PRICE] - hist_prices.get(row[CN.TICKER], {}).get(period)) 
-                / hist_prices.get(row[CN.TICKER], {}).get(period) * 100
-            ) if hist_prices.get(row[CN.TICKER], {}).get(period) else None, 
-            axis=1
-        )
-
-    s[CN.DAY_CHNG_VAL] = s[CN.MARKET_VALUE] * s[CN.DAY_CHNG] / (1 + s[CN.DAY_CHNG])
-
-    s[CN.DAY_CHNG] = 100 * s[CN.DAY_CHNG]
-    s[CN.GAIN] = s[CN.MARKET_VALUE] - s[CN.TOTAL]
-    s[CN.GAIN_PCT] = 100 * s[CN.GAIN] / s[CN.TOTAL]
-
-    t = s.sum()
-    t = t[[CN.TOTAL, CN.MARKET_VALUE, CN.DAY_CHNG_VAL]]
-    t[CN.GAIN] = t[CN.MARKET_VALUE] - t[CN.TOTAL]
-    t[CN.GAIN_PCT] = 100 * t[CN.GAIN] / t[CN.TOTAL]
-    t[CN.DAY_CHNG] = (
-        100 * t[CN.DAY_CHNG_VAL] / (t[CN.MARKET_VALUE] - t[CN.DAY_CHNG_VAL])
-    )
-    t = t[
-        [CN.TOTAL, CN.MARKET_VALUE, CN.GAIN, CN.GAIN_PCT, CN.DAY_CHNG, CN.DAY_CHNG_VAL]
-    ]
-    t = t.to_frame().T
+    enriched = get_enriched_open_positions()
+    s = _positions_to_dataframe(enriched["positions"])
+    t = _totals_to_dataframe(enriched["positions"])
 
     formatted_t = t.copy()
-    formatted_t[CN.TOTAL] = formatted_t[CN.TOTAL].apply(lambda x: f"${x:,.0f}")
-    formatted_t[CN.MARKET_VALUE] = formatted_t[CN.MARKET_VALUE].apply(lambda x: f"${x:,.0f}")
-    formatted_t[CN.GAIN] = formatted_t[CN.GAIN].apply(lambda x: f"${x:,.0f}")
-    formatted_t[CN.DAY_CHNG_VAL] = formatted_t[CN.DAY_CHNG_VAL].apply(lambda x: f"${x:,.0f}")
+    for column in [CN.TOTAL, CN.MARKET_VALUE, CN.GAIN, CN.DAY_CHNG_VAL]:
+        formatted_t[column] = formatted_t[column].apply(lambda x: f"${x:,.0f}")
 
-    formatted_t[CN.GAIN_PCT] = formatted_t[CN.GAIN_PCT].apply(lambda x: f"{x:.2f}%")
-    formatted_t[CN.DAY_CHNG] = formatted_t[CN.DAY_CHNG].apply(lambda x: f"{x:.2f}%")
+    for column in [CN.GAIN_PCT, CN.DAY_CHNG]:
+        formatted_t[column] = formatted_t[column].apply(lambda x: f"{x:.2f}%")
 
-    s = s[
+    try:
+        update_portfolio_summary(t)
+    except Exception as e:
+        print(f"Warning: Failed to save data to Google Sheets: {e}")
+
+    return s, formatted_t
+
+
+def _positions_to_dataframe(positions):
+    s = pd.DataFrame(
         [
+            {
+                CN.NAME: pos["company"],
+                CN.TICKER: pos["ticker"],
+                CN.PRICE: pos["current_price"],
+                CN.QTY: pos["qty"],
+                CN.DAY_CHNG: pos["day_change_pct"],
+                CN.DAY_CHNG_VAL: pos["day_change_value"],
+                CN.COST_PRICE: pos["average_cost"],
+                CN.TOTAL: pos["total_cost_basis"],
+                CN.MARKET_VALUE: pos["market_value"],
+                CN.GAIN_PCT: pos["gain_pct"],
+                CN.GAIN: pos["gain"],
+                CN.CHNG_7D: pos["change_7d_pct"],
+                CN.CHNG_1M: pos["change_1m_pct"],
+                CN.CHNG_3M: pos["change_3m_pct"],
+                CN.CHNG_6M: pos["change_6m_pct"],
+                CN.CHNG_1Y: pos["change_1y_pct"],
+            }
+            for pos in positions
+        ],
+        columns=[
             CN.NAME,
             CN.TICKER,
             CN.PRICE,
@@ -112,15 +74,50 @@ def summary():
             CN.CHNG_3M,
             CN.CHNG_6M,
             CN.CHNG_1Y,
-        ]
-    ]
-    s = s.astype({CN.TOTAL: int, CN.MARKET_VALUE: int, CN.GAIN: int})
-    s = s.round(2)
-    s = s.sort_values(CN.DAY_CHNG, ascending=False)
+        ],
+    )
 
-    try:
-        update_portfolio_summary(t)
-    except Exception as e:
-        print(f"Warning: Failed to save data to Google Sheets: {e}")
-    
-    return s, formatted_t
+    if s.empty:
+        return s
+
+    money_columns = [CN.TOTAL, CN.MARKET_VALUE, CN.GAIN]
+    s[money_columns] = s[money_columns].round(0).astype("Int64")
+    s = s.round(2)
+    return s.sort_values(CN.DAY_CHNG, ascending=False, na_position="last")
+
+
+def _totals_to_dataframe(positions):
+    total_cost_basis = sum(pos["total_cost_basis"] or 0 for pos in positions)
+    priced_cost_basis = sum(
+        pos["total_cost_basis"] or 0 for pos in positions if pos["market_value"] is not None
+    )
+    market_value = sum(pos["market_value"] or 0 for pos in positions)
+    gain = sum(pos["gain"] or 0 for pos in positions)
+    day_change_value = sum(pos["day_change_value"] or 0 for pos in positions)
+    previous_market_value = market_value - day_change_value
+
+    gain_pct = 100 * gain / priced_cost_basis if priced_cost_basis else 0
+    day_change_pct = (
+        100 * day_change_value / previous_market_value if previous_market_value else 0
+    )
+
+    return pd.DataFrame(
+        [
+            {
+                CN.TOTAL: total_cost_basis,
+                CN.MARKET_VALUE: market_value,
+                CN.GAIN: gain,
+                CN.GAIN_PCT: gain_pct,
+                CN.DAY_CHNG: day_change_pct,
+                CN.DAY_CHNG_VAL: day_change_value,
+            }
+        ],
+        columns=[
+            CN.TOTAL,
+            CN.MARKET_VALUE,
+            CN.GAIN,
+            CN.GAIN_PCT,
+            CN.DAY_CHNG,
+            CN.DAY_CHNG_VAL,
+        ],
+    )

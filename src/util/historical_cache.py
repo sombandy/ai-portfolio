@@ -1,8 +1,11 @@
 
 import datetime
+import logging
 import yfinance as yf
 import pandas as pd
 from typing import List, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 _price_cache: Dict[str, Dict[str, float]] = {}
 _cache_date: Optional[datetime.date] = None
@@ -26,7 +29,7 @@ def get_historical_prices(tickers: List[str]) -> Dict[str, Dict[str, float]]:
     missing_tickers = [t for t in tickers if t not in _price_cache]
     
     if missing_tickers:
-        print(f"Fetching historical data for: {missing_tickers}")
+        logger.info("Fetching historical data for: %s", missing_tickers)
         _fetch_and_cache_prices(missing_tickers)
         
     # Return requested tickers from cache
@@ -42,7 +45,14 @@ def _fetch_and_cache_prices(tickers: List[str]):
     try:
         # Fetch 1 year of data
         # auto_adjust=True ensures we get split/dividend adjusted prices (usually in 'Close')
-        data = yf.download(tickers, period="1y", group_by='ticker', auto_adjust=True, threads=True)
+        data = yf.download(
+            tickers,
+            period="1y",
+            group_by='ticker',
+            auto_adjust=True,
+            threads=True,
+            progress=False,
+        )
         
         if data.empty:
             for t in tickers:
@@ -76,8 +86,8 @@ def _fetch_and_cache_prices(tickers: List[str]):
                 else:
                     _price_cache[t] = {}
                     
-    except Exception as e:
-        print(f"Error fetching historical prices: {e}")
+    except Exception:
+        logger.exception("Error fetching historical prices")
         # Prevent partial failures from blocking future attempts? 
         # Or mark failed tickers as empty to avoid retry?
         for t in tickers:
