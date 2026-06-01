@@ -11,6 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from src import portfolio_data
 from src.mcp_server.config import PortfolioMcpConfig, load_config
 from src.mcp_server.schemas import (
+    ClosedPosition,
     EnrichedPosition,
     PortfolioSnapshotResponse,
     PositionDetailResponse,
@@ -97,14 +98,18 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
     @mcp.tool()
     def get_position_detail(
         ticker: str,
-        include_closed_history: bool = True,
+        include_closed_positions: bool = True,
+        include_raw_transactions: bool = False,
+        include_aggregate: bool = True,
     ) -> dict:
-        """Return open position, raw transactions, and closed-history detail for one ticker."""
+        """Return current position context and summarized closed history for one ticker."""
 
         response = PositionDetailResponse.model_validate(
             portfolio_data.get_position_detail(
                 ticker=ticker,
-                include_closed_history=include_closed_history,
+                include_closed_positions=include_closed_positions,
+                include_raw_transactions=include_raw_transactions,
+                include_aggregate=include_aggregate,
             )
         )
         return response.model_dump(mode="json")
@@ -139,11 +144,17 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
         return response.model_dump(mode="json")
 
     @mcp.tool()
-    def get_realized_positions(ticker: str | None = None) -> dict:
-        """Return closed-position summaries computed from the Sell tab."""
+    def get_realized_positions(
+        ticker: str | None = None,
+        include_aggregate: bool = True,
+    ) -> dict:
+        """Return one closed-position summary per Sell row from the Sell tab."""
 
         response = RealizedPositionsResponse.model_validate(
-            portfolio_data.get_realized_positions(ticker=ticker)
+            portfolio_data.get_realized_positions(
+                ticker=ticker,
+                include_aggregate=include_aggregate,
+            )
         )
         return response.model_dump(mode="json")
 
@@ -158,6 +169,12 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
         """Return the JSON schema for enriched current positions."""
 
         return json.dumps(EnrichedPosition.model_json_schema(), indent=2)
+
+    @mcp.resource("portfolio://schema/closed_positions")
+    def closed_positions_schema() -> str:
+        """Return the JSON schema for closed-position/disposal summaries."""
+
+        return json.dumps(ClosedPosition.model_json_schema(), indent=2)
 
     return mcp
 

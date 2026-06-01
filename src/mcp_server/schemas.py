@@ -108,9 +108,32 @@ class RealizedPosition(StrictModel):
     transaction_count: int
 
 
+class ClosedPosition(StrictModel):
+    closed_position_id: str
+    ticker: str
+    company: str | None
+    category: str | None
+    close_date: str | None
+    qty_bought: float
+    qty_sold: float
+    is_quantity_matched: bool
+    cost_basis: float
+    proceeds: float
+    average_cost: float | None
+    sell_price: float | None
+    average_sell_price: float | None
+    realized_gain: float
+    realized_gain_pct: float | None
+    first_buy_date: str | None
+    buy_transaction_count: int
+    buy_row_numbers: list[int]
+    sell_row_number: int | None
+
+
 class RealizedPositionsResponse(StrictModel):
     source: Literal["sell_tab"]
-    realized_positions: list[RealizedPosition]
+    closed_positions: list[ClosedPosition]
+    aggregate_realized_positions: list[RealizedPosition] | None
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -118,6 +141,7 @@ class PositionDetailResponse(StrictModel):
     ticker: str
     open_position: EnrichedPosition | None
     open_transactions: list[Transaction]
+    closed_positions: list[ClosedPosition]
     closed_transactions: list[Transaction]
-    realized_position: RealizedPosition | None
+    aggregate_realized_position: RealizedPosition | None
     warnings: list[str] = Field(default_factory=list)
