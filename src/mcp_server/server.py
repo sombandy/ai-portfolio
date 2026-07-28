@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 from typing import Literal
 
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 from src import portfolio_data
 from src.mcp_server.config import PortfolioMcpConfig, load_config
@@ -19,6 +21,15 @@ from src.mcp_server.schemas import (
     RealizedPositionsResponse,
     Transaction,
     TransactionsResponse,
+)
+
+logger = logging.getLogger(__name__)
+
+READ_ONLY_TOOL_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=True,
 )
 
 
@@ -40,9 +51,7 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
     config = config or load_config()
     auth_settings = None
     token_verifier = None
-    if config.transport == "streamable-http":
-        if not config.auth_token:
-            raise ValueError("PORTFOLIO_MCP_AUTH_TOKEN is required for streamable-http")
+    if config.transport == "streamable-http" and config.auth_token:
         base_url = f"http://{config.host}:{config.port}"
         auth_settings = AuthSettings(
             issuer_url=base_url,
@@ -50,6 +59,13 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
             required_scopes=["portfolio:read"],
         )
         token_verifier = StaticTokenVerifier(config.auth_token)
+    elif config.transport == "streamable-http":
+        logger.warning(
+            "Starting an unauthenticated streamable-http MCP server at http://%s:%s%s",
+            config.host,
+            config.port,
+            config.path,
+        )
 
     mcp = FastMCP(
         "portfolio",
@@ -65,7 +81,10 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
         token_verifier=token_verifier,
     )
 
-    @mcp.tool()
+    @mcp.tool(
+        title="Get portfolio snapshot",
+        annotations=READ_ONLY_TOOL_ANNOTATIONS,
+    )
     def get_portfolio_snapshot(
         group_by: Literal["ticker", "category", "account", "brokerage"] = "ticker",
     ) -> dict:
@@ -76,7 +95,10 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
         )
         return response.model_dump(mode="json")
 
-    @mcp.tool()
+    @mcp.tool(
+        title="Get portfolio positions",
+        annotations=READ_ONLY_TOOL_ANNOTATIONS,
+    )
     def get_positions(
         ticker: str | None = None,
         category: str | None = None,
@@ -95,7 +117,10 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
         )
         return response.model_dump(mode="json")
 
-    @mcp.tool()
+    @mcp.tool(
+        title="Get position detail",
+        annotations=READ_ONLY_TOOL_ANNOTATIONS,
+    )
     def get_position_detail(
         ticker: str,
         include_closed_positions: bool = True,
@@ -114,7 +139,10 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
         )
         return response.model_dump(mode="json")
 
-    @mcp.tool()
+    @mcp.tool(
+        title="Get portfolio transactions",
+        annotations=READ_ONLY_TOOL_ANNOTATIONS,
+    )
     def get_transactions(
         ticker: str | None = None,
         start_date: str | None = None,
@@ -143,7 +171,10 @@ def create_server(config: PortfolioMcpConfig | None = None) -> FastMCP:
         )
         return response.model_dump(mode="json")
 
-    @mcp.tool()
+    @mcp.tool(
+        title="Get realized positions",
+        annotations=READ_ONLY_TOOL_ANNOTATIONS,
+    )
     def get_realized_positions(
         ticker: str | None = None,
         include_aggregate: bool = True,
