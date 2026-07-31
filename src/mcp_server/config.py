@@ -19,16 +19,16 @@ class PortfolioMcpConfig:
 
 
 def load_config() -> PortfolioMcpConfig:
-    transport = os.getenv("PORTFOLIO_MCP_TRANSPORT", "stdio")
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
     if transport not in {"stdio", "sse", "streamable-http"}:
-        raise ValueError("PORTFOLIO_MCP_TRANSPORT must be stdio, sse, or streamable-http")
+        raise ValueError("MCP_TRANSPORT must be stdio, sse, or streamable-http")
 
     return PortfolioMcpConfig(
         transport=transport,
-        host=os.getenv("PORTFOLIO_MCP_HOST", "127.0.0.1"),
-        port=int(os.getenv("PORTFOLIO_MCP_PORT", "8000")),
-        path=os.getenv("PORTFOLIO_MCP_PATH", "/mcp"),
-        auth_token=os.getenv("PORTFOLIO_MCP_AUTH_TOKEN"),
+        host=os.getenv("MCP_HOST", "127.0.0.1"),
+        port=int(os.getenv("MCP_PORT", "8000")),
+        path=os.getenv("MCP_PATH", "/mcp"),
+        auth_token=os.getenv("MCP_AUTH_TOKEN"),
     )
 
 

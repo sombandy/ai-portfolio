@@ -53,7 +53,7 @@ not share the ngrok URL, and stop ngrok as soon as testing is complete.
 
 ```bash
 TRANSACTIONS_SHEET=your-google-sheet-id \
-PORTFOLIO_MCP_TRANSPORT=streamable-http \
+MCP_TRANSPORT=streamable-http \
 uv run python -m src.mcp_server
 ```
 
@@ -64,7 +64,7 @@ http://127.0.0.1:8000/mcp
 ```
 
 The HTTP defaults are `127.0.0.1:8000`, path `/mcp`, and no authentication.
-Setting `PORTFOLIO_MCP_AUTH_TOKEN` enables the optional static bearer-token
+Setting `MCP_AUTH_TOKEN` enables the optional static bearer-token
 mode for non-ChatGPT testing.
 
 ### 2. Expose it through ngrok
@@ -139,11 +139,11 @@ OAuth-compatible authentication. The current static bearer-token mode remains
 available for non-ChatGPT API testing:
 
 ```bash
-PORTFOLIO_MCP_TRANSPORT=streamable-http \
-PORTFOLIO_MCP_HOST=127.0.0.1 \
-PORTFOLIO_MCP_PORT=8000 \
-PORTFOLIO_MCP_PATH=/mcp \
-PORTFOLIO_MCP_AUTH_TOKEN=local-test-token \
+MCP_TRANSPORT=streamable-http \
+MCP_HOST=127.0.0.1 \
+MCP_PORT=8000 \
+MCP_PATH=/mcp \
+MCP_AUTH_TOKEN=local-test-token \
 uv run python -m src.mcp_server
 ```
 
