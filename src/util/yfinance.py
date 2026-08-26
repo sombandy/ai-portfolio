@@ -3,9 +3,21 @@
 # first-party
 from src.config.ColumnNameConsts import ColumnNames as CN
 
+# standard library
+import math
+
 # third-party
 import pandas as pd
 import yfinance as yf
+
+
+def _positive_float(value):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) and value > 0 else None
+
 
 def curr_price(tickers, crypto=False):
     if tickers is None or len(tickers) == 0:
@@ -16,16 +28,25 @@ def curr_price(tickers, crypto=False):
 
     for ticker in tickers:
         tick = yf.Ticker(ticker)
-        info = tick.info
 
-        # Get previous close from ticker.info for accurate yesterday's price
-        prev_close_val = info.get('previousClose') or info.get('regularMarketPreviousClose', 0)
-        prev_close_prices[ticker] = prev_close_val
+        # fast_info derives these values from daily price history. This matters for
+        # 24-hour assets such as BTC, whose quote metadata can expose a stale
+        # previousClose value for several days.
+        fast_info = tick.fast_info
+        curr_price_val = _positive_float(fast_info.get("last_price"))
+        prev_close_val = _positive_float(fast_info.get("regular_market_previous_close"))
 
-        # Get current price from ticker info
-        curr_price_val = info.get('currentPrice') or info.get('regularMarketPrice', 0)
-        c_prices[ticker] = curr_price_val
+        if curr_price_val is None or prev_close_val is None:
+            info = tick.info
+            curr_price_val = curr_price_val or _positive_float(
+                info.get("regularMarketPrice") or info.get("currentPrice")
+            )
+            prev_close_val = prev_close_val or _positive_float(
+                info.get("regularMarketPreviousClose") or info.get("previousClose")
+            )
 
+        c_prices[ticker] = curr_price_val or 0.0
+        prev_close_prices[ticker] = prev_close_val or 0.0
 
     c_prices.name = CN.PRICE
 
@@ -34,7 +55,7 @@ def curr_price(tickers, crypto=False):
     # print("Current prices")
     # print(c_prices.to_string())
 
-    # Calculate day change using previousClose from ticker info
+    # Calculate day change using the prior daily close.
     day_change = pd.Series(0.0, index=c_prices.index)
     for ticker in tickers:
         if prev_close_prices[ticker] > 0:
